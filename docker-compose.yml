@@ -1,0 +1,40 @@
+services:
+  # 1. 데이터베이스 (MariaDB)
+  db:
+    image: mariadb:latest
+    container_name: yj-db
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: "1234"
+      MARIADB_DATABASE: user_db
+    ports:
+      - "3316:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # 2. 백엔드 (Spring Boot)
+  backend:
+    # build 대신 방금 push한 본인의 이미지를 사용합니다.
+    image: mingseoo/yj-backend:1.0
+    container_name: yj-backend
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 3. 프론트엔드 (React)
+  frontend:
+    # 프론트엔드도 push 하셨다면 image로 바꾸고, 아니면 build를 유지하세요.
+    image: mingseoo/yj-frontend:1.0
+    container_name: yj-frontend
+    ports:
+      - "3000:80"
+#    depends_on:
+#      - backend
