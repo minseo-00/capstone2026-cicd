@@ -3,7 +3,7 @@ name: CD Pipeline
 
 on:
   push:
-    branches: [ main ]    # main에 merge 될 때만 실행
+    branches: [ main ]
 
 jobs:
   build-and-push:
@@ -13,26 +13,32 @@ jobs:
       - name: 소스코드 체크아웃
         uses: actions/checkout@v4
 
-      # Docker Hub 로그인 (Secrets 사용)
+      # Docker Hub 로그인
       - name: Docker Hub 로그인
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 1. 백엔드 이미지 빌드 (태그 동시 지정)
+      # 백엔드 JAR 빌드 (중요 추가)
+      - name: Backend Jar Build
+        run: |
+          cd backend
+          ./mvnw clean package -DskipTests
+
+      # 백엔드 Docker 이미지 빌드
       - name: Backend Docker Build
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/yj-backend:${{ github.sha }} ./backend
           docker tag ${{ secrets.DOCKERHUB_USERNAME }}/yj-backend:${{ github.sha }} ${{ secrets.DOCKERHUB_USERNAME }}/yj-backend:latest
 
-      # 2. 프런트엔드 이미지 빌드 (태그 동시 지정) - 이 부분이 누락되어 에러가 났었습니다.
+      # 프론트엔드 Docker 이미지 빌드
       - name: Frontend Docker Build
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/yj-frontend:${{ github.sha }} ./frontend
           docker tag ${{ secrets.DOCKERHUB_USERNAME }}/yj-frontend:${{ github.sha }} ${{ secrets.DOCKERHUB_USERNAME }}/yj-frontend:latest
 
-      # 3. Docker Hub에 Push
+      # Docker Hub Push
       - name: Docker Hub Push
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/yj-backend:${{ github.sha }}
